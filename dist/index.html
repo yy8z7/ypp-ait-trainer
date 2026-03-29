@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>7日刷题通关</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <link rel="stylesheet" href="styles.css?v=17">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Home Screen -->
+        <div id="home-screen" class="screen active">
+            <div class="header">
+                <h1>7日通关计划</h1>
+                <div class="streak-container">
+                    <i class="fas fa-fire streak-icon"></i>
+                    <span><span id="streak-count">0</span> 天连续打卡</span>
+                </div>
+            </div>
+            <div class="progress-section">
+                <p>今日进度: <span id="overall-progress-text">0%</span></p>
+                <div class="progress-bar" id="daily-progress-container">
+                    <!-- Progress segments injected via JS -->
+                </div>
+            </div>
+            <div class="today-info">
+                <h2>第 <span id="current-day-text">1</span> 天任务</h2>
+                <p id="today-task-desc">预计需 2 小时完成</p>
+                <div class="action-buttons-grid">
+                    <button id="start-btn" class="primary-btn btn-large">开始今日任务</button>
+                    <button id="view-wrong-btn" class="secondary-btn btn-large">查看错题集 (<span id="wrong-count">0</span>)</button>
+                </div>
+            </div>
+            <div id="certificate-section" class="hidden">
+                <button id="ultimate-challenge-btn" class="warning-btn btn-large mt-20">终极挑战 (30题)</button>
+                <button id="view-cert-btn" class="success-btn btn-large mt-20 hidden">查看通关证书</button>
+            </div>
+            
+            <button id="reset-btn" class="danger-btn mt-20" style="font-size: 0.875rem; padding: 0.5rem 1rem; min-height: 2.25rem; background: transparent; color: var(--text-muted); border: 1px solid var(--border-color); opacity: 0.7;">
+                <i class="fas fa-trash-alt"></i> 清空所有进度
+            </button>
+        </div>
+
+        <!-- Study Screen -->
+        <div id="study-screen" class="screen">
+            <div class="study-header">
+                <button id="back-btn" class="icon-btn"><i class="fas fa-arrow-left"></i></button>
+                <div class="study-progress">
+                    <span id="study-progress-text">本轮已做 0/50 题 | 预计 0 分钟</span>
+                    <div class="progress-bar mini" id="study-progress-container">
+                        <!-- Progress segments injected via JS -->
+                    </div>
+                </div>
+            </div>
+            
+            <div id="card-container" class="card-container">
+                <!-- Card injected via JS -->
+            </div>
+        </div>
+
+        <!-- Print Screen (Hidden normally) -->
+        <div id="print-screen" class="print-screen">
+            <h1>今日知识点小结与错题解析</h1>
+            <p>打卡日期: <span id="print-date"></span></p>
+            <div id="print-content"></div>
+        </div>
+        
+        <!-- Certificate Modal -->
+        <div id="cert-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="cert-content" id="cert-content">
+                    <h2>🎉 7日通关证书 🎉</h2>
+                    <p>授予：<strong>优秀学员</strong></p>
+                    <p>恭喜您成功通过终极挑战！正确率达到 90% 以上！</p>
+                    <p>日期：<span id="cert-date"></span></p>
+                </div>
+                <div class="modal-actions">
+                    <button id="save-cert-btn" class="primary-btn">保存图片</button>
+                    <button id="close-cert-btn" class="secondary-btn">关闭</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Wrong Book Modal -->
+        <div id="wrong-book-modal" class="modal hidden">
+            <div class="modal-content" style="width: 90%; max-width: 40rem; max-height: 80vh; display: flex; flex-direction: column; padding: 1.5rem;">
+                <h2 style="margin-bottom: 1.5rem; color: var(--text-color);">我的错题集</h2>
+                <div id="wrong-book-list" style="overflow-y: auto; flex-grow: 1; text-align: left; padding-right: 0.5rem;">
+                    <!-- Wrong questions injected here -->
+                </div>
+                <div class="modal-actions" style="margin-top: 1.5rem;">
+                    <button id="close-wrong-book-btn" class="primary-btn">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- html2canvas for certificate -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="app.js?v=17"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                .then(registration => {
+                    console.log('Service Worker Registered');
+                    
+                    // Automatically update service worker if a new one is available
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // Force reload to use the new service worker immediately
+                                window.location.reload();
+                            }
+                        });
+                    });
+                })
+                .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>

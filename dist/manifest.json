@@ -1,0 +1,10 @@
+{
+  "name": "7日刷题通关",
+  "short_name": "7日通关",
+  "description": "面向零基础用户的七日刷题小程序",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0056b3",
+  "icons": []
+}
