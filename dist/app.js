@@ -35,7 +35,7 @@ async function init() {
         return;
     }
 
-    loadState();
+    await loadState();
     renderHome();
 
     document.getElementById('start-btn').addEventListener('click', startSession);
@@ -53,9 +53,14 @@ async function init() {
     document.getElementById('save-cert-btn').addEventListener('click', saveCertificate);
     
     // Add reset and view wrong book handlers
-    document.getElementById('reset-btn').addEventListener('click', () => {
+    document.getElementById('reset-btn').addEventListener('click', async () => {
         if (confirm('警告：此操作将清空您的所有学习进度、错题记录和打卡天数！\n\n确定要重新开始吗？')) {
-            localStorage.removeItem(STATE_KEY);
+            await fetch('/api/state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(null)
+            });
+            localStorage.removeItem(STATE_KEY); // Keep it for compatibility
             alert('进度已清空，页面将重新加载。');
             location.reload();
         }
@@ -67,10 +72,30 @@ async function init() {
     });
 }
 
-function loadState() {
-    const saved = localStorage.getItem(STATE_KEY);
+async function loadState() {
+    let saved = null;
+    try {
+        const res = await fetch('/api/state');
+        if (res.ok) {
+            saved = await res.json();
+        }
+    } catch (e) {
+        console.warn('Failed to load state from server, falling back to localStorage', e);
+    }
+
+    // Auto-migrate from localStorage if server has no data
+    if (!saved) {
+        const local = localStorage.getItem(STATE_KEY);
+        if (local) {
+            console.log('Migrating state from localStorage to server...');
+            saved = JSON.parse(local);
+            state = saved;
+            saveState(); // Save to server immediately
+        }
+    }
+
     if (saved) {
-        state = JSON.parse(saved);
+        state = saved;
     } else {
         // First time initialization
         state.startDate = new Date().toISOString();
@@ -95,6 +120,11 @@ function loadState() {
 
 function saveState() {
     localStorage.setItem(STATE_KEY, JSON.stringify(state));
+    fetch('/api/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state)
+    }).catch(e => console.warn('Failed to save state to server', e));
 }
 
 function getTodayString() {
@@ -545,6 +575,7 @@ function markQuestionCompleted(id) {
         }
         if (!stats.completedIds.includes(id)) {
             stats.completedIds.push(id);
+            saveState(); // Ensure state is saved when progress is made
         }
     }
 }
@@ -631,6 +662,7 @@ function checkAnswer(qData, optionsElements, card) {
 
         currentQ = null;
         saveSessionState();
+        saveState(); // Ensure overall state is synced with server after a wrong answer
 
         optionsElements.forEach(opt => {
             if (opt.classList.contains('selected')) opt.classList.add('wrong');
