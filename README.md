@@ -39,19 +39,24 @@ python -m http.server 8000
 │   ├── index.html          # 主界面
 │   ├── app.js              # 核心业务逻辑与算法
 │   ├── styles.css          # 响应式样式与主题
-│   ├── questions.json      # 题库数据 (由 parser.js 生成)
+│   ├── questions.json      # 题库数据 (由 scripts/parser.js 生成)
 │   ├── manifest.json       # PWA 配置文件
 │   └── sw.js               # Service Worker 脚本 (缓存与热更新控制)
-├── parser.js               # 题库解析脚本 (Node.js)
-├── 一键启动.bat            # 快捷启动脚本
-└── docs/                   # 相关说明文档
+├── scripts/                # 脚本工具目录
+│   └── parser.js           # 题库解析脚本 (Node.js)
+├── docs/                   # 相关说明文档与原始素材
+│   ├── 七日计划算法说明文档.md
+│   ├── 测试报告与用户反馈表.md
+│   └── 题库001.html        # 原始 HTML 题库文件
+├── 一键启动.bat            # Windows 快捷启动脚本
+└── package.json            # Node.js 依赖配置
 ```
 
 ## 数据解析 (Parsing)
-如果需要更新题库，可以将新的 HTML 题库文件（例如 `题库001.html`）放在根目录，然后运行：
+如果需要更新题库，可以将新的 HTML 题库文件放在 `docs/` 目录，然后修改并运行解析脚本：
 ```bash
 npm install
-node parser.js
+node scripts/parser.js
 ```
 脚本会自动解析 HTML 并将格式化后的题目输出至 `dist/questions.json`。
 

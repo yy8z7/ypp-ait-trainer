@@ -1,7 +1,12 @@
 const fs = require('fs');
+const path = require('path');
 const cheerio = require('cheerio');
 
-const html = fs.readFileSync('./题库001.html', 'utf-8');
+// Define file paths
+const inputFile = path.join(__dirname, '../docs/题库001.html');
+const outputFile = path.join(__dirname, '../dist/questions.json');
+
+const html = fs.readFileSync(inputFile, 'utf-8');
 const $ = cheerio.load(html);
 
 const questions = [];
@@ -89,6 +94,6 @@ $('#testpaper-questions-fill .testpaper-question').each((i, el) => {
 });
 
 fs.mkdirSync('./dist', { recursive: true });
-fs.writeFileSync('./dist/questions.json', JSON.stringify(questions, null, 2));
+fs.writeFileSync(outputFile, JSON.stringify(questions, null, 2), 'utf-8');
 
-console.log(`Parsed ${questions.length} questions.`);
+console.log(`Successfully parsed ${questions.length} questions and saved to dist/questions.json.`);
