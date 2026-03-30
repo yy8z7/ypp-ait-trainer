@@ -1,10 +1,14 @@
-const fs = require('fs');
-const path = require('path');
-const cheerio = require('cheerio');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import * as cheerio from 'cheerio';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Define file paths
 const inputFile = path.join(__dirname, '../docs/题库001.html');
-const outputFile = path.join(__dirname, '../dist/questions.json');
+const outputFile = path.join(__dirname, '../public/questions.json');
 
 const html = fs.readFileSync(inputFile, 'utf-8');
 const $ = cheerio.load(html);
@@ -93,7 +97,9 @@ $('#testpaper-questions-fill .testpaper-question').each((i, el) => {
     });
 });
 
-fs.mkdirSync('./dist', { recursive: true });
+fs.mkdirSync('./public', { recursive: true });
 fs.writeFileSync(outputFile, JSON.stringify(questions, null, 2), 'utf-8');
 
-console.log(`Successfully parsed ${questions.length} questions and saved to dist/questions.json.`);
+console.log(
+    `Successfully parsed ${questions.length} questions and saved to public/questions.json.`
+);

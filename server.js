@@ -1,6 +1,10 @@
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const PORT = 3000;
 const DIST_DIR = path.join(__dirname, 'dist');
@@ -11,9 +15,11 @@ const MIME_TYPES = {
     '.js': 'text/javascript',
     '.css': 'text/css',
     '.json': 'application/json',
+    '.webmanifest': 'application/manifest+json',
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
-    '.ico': 'image/x-icon',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon'
 };
 
 const server = http.createServer((req, res) => {
@@ -47,7 +53,7 @@ const server = http.createServer((req, res) => {
             return;
         } else if (req.method === 'POST') {
             let body = '';
-            req.on('data', chunk => {
+            req.on('data', (chunk) => {
                 body += chunk.toString();
             });
             req.on('end', () => {
@@ -56,11 +62,11 @@ const server = http.createServer((req, res) => {
                 if (!fs.existsSync(dataDir)) {
                     fs.mkdirSync(dataDir, { recursive: true });
                 }
-                
+
                 // Write safely and respond
                 try {
                     // Try parsing JSON to ensure it's valid before saving
-                    if (body !== "null") {
+                    if (body !== 'null') {
                         JSON.parse(body);
                     }
                     fs.writeFile(DATA_FILE, body, 'utf8', (err) => {
@@ -85,7 +91,18 @@ const server = http.createServer((req, res) => {
 
     // Serve static files
     let requestUrl = req.url.split('?')[0]; // Strip query parameters
-    let filePath = path.join(DIST_DIR, requestUrl === '/' ? 'index.html' : requestUrl);
+    let safePath = path.normalize(requestUrl).replace(/^(\.\.[/\\])+/, '');
+    let filePath = path.join(
+        DIST_DIR,
+        safePath === '/' || safePath === '\\' ? 'index.html' : safePath
+    );
+
+    // Prevent directory traversal
+    if (!filePath.startsWith(DIST_DIR)) {
+        res.writeHead(403);
+        res.end('Forbidden');
+        return;
+    }
     let extname = path.extname(filePath);
     let contentType = MIME_TYPES[extname] || 'application/octet-stream';
 
