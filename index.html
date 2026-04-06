@@ -26,7 +26,14 @@
             <!-- Home Screen -->
             <div id="home-screen" class="screen active">
                 <div class="header">
-                    <h1>7日通关计划</h1>
+                    <h1 id="dynamic-title">7日通关计划</h1>
+                    
+                    <div class="journey-track-wrapper">
+                        <div class="journey-track" id="journey-track-container">
+                            <!-- Nodes injected via JS -->
+                        </div>
+                    </div>
+
                     <div class="streak-container">
                         <i class="fas fa-fire streak-icon"></i>
                         <span><span id="streak-count">0</span> 天连续打卡</span>
@@ -95,7 +102,7 @@
             <div id="cert-modal" class="modal hidden">
                 <div class="modal-content">
                     <div class="cert-content" id="cert-content">
-                        <h2>🎉 7日通关证书 🎉</h2>
+                        <h2 id="dynamic-cert-title">🎉 7日通关证书 🎉</h2>
                         <p>授予：<strong>优秀学员</strong></p>
                         <p>恭喜您成功通过终极挑战！正确率达到 90% 以上！</p>
                         <p>日期：<span id="cert-date"></span></p>

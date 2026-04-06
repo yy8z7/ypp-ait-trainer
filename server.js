@@ -55,6 +55,9 @@ const server = http.createServer((req, res) => {
             let body = '';
             req.on('data', (chunk) => {
                 body += chunk.toString();
+                if (body.length > 5 * 1024 * 1024) { // 5MB limit
+                    req.connection.destroy();
+                }
             });
             req.on('end', () => {
                 // Ensure data directory exists
@@ -69,14 +72,23 @@ const server = http.createServer((req, res) => {
                     if (body !== 'null') {
                         JSON.parse(body);
                     }
-                    fs.writeFile(DATA_FILE, body, 'utf8', (err) => {
+                    const tmpFile = DATA_FILE + '.tmp';
+                    fs.writeFile(tmpFile, body, 'utf8', (err) => {
                         if (err) {
-                            console.error('[ERROR] Failed to write state:', err);
+                            console.error('[ERROR] Failed to write temp state:', err);
                             res.writeHead(500);
                             res.end('Error saving state');
                         } else {
-                            res.writeHead(200, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ success: true }));
+                            fs.rename(tmpFile, DATA_FILE, (renameErr) => {
+                                if (renameErr) {
+                                    console.error('[ERROR] Failed to rename temp state:', renameErr);
+                                    res.writeHead(500);
+                                    res.end('Error saving state');
+                                } else {
+                                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                                    res.end(JSON.stringify({ success: true }));
+                                }
+                            });
                         }
                     });
                 } catch (e) {

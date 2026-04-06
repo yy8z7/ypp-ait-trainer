@@ -5,6 +5,12 @@
 
 export const STATE_KEY = 'study_app_state';
 
+export const config = {
+    totalDays: 7, // 动态调整总天数
+    get learningDays() { return Math.max(1, this.totalDays - 3); },
+    get mixedDays() { return Math.max(1, this.totalDays - 1); }
+};
+
 export const state = {
     currentDay: 1,
     startDate: null,
@@ -52,12 +58,12 @@ export async function loadState(questionsData) {
         let allIds = questionsData.map((q) => q.id);
         allIds.sort(() => Math.random() - 0.5);
 
-        state.daySplit = [
-            allIds.slice(0, 573), // Day 1
-            allIds.slice(573, 859), // Day 2
-            allIds.slice(859, 1145), // Day 3
-            allIds.slice(1145) // Day 4
-        ];
+        let totalQ = allIds.length;
+        let dailyQ = Math.ceil(totalQ / config.learningDays);
+        state.daySplit = [];
+        for (let i = 0; i < config.learningDays; i++) {
+            state.daySplit.push(allIds.slice(i * dailyQ, (i + 1) * dailyQ));
+        }
         state.activeSession = { isActive: false };
         saveState();
     }
