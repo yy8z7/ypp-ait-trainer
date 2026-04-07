@@ -19,16 +19,24 @@
             rel="stylesheet"
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
         />
-      <script type="module" crossorigin src="./assets/index-B9xDhpo2.js"></script>
-      <link rel="stylesheet" crossorigin href="./assets/index-CA0tu77f.css">
+      <script type="module" crossorigin src="./assets/index-BOpFaO8a.js"></script>
+      <link rel="stylesheet" crossorigin href="./assets/index-BfWWRCgu.css">
     <link rel="manifest" href="./manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="./registerSW.js"></script></head>
     <body>
         <div id="app">
             <!-- Home Screen -->
             <div id="home-screen" class="screen active">
-                <div class="header">
+                <div class="header" style="position: relative;">
                     <h1 id="dynamic-title">7日通关计划</h1>
                     
+                    <div class="mode-tabs">
+                        <button class="mode-tab active" data-mode="study">闯关打卡模式</button>
+                        <button class="mode-tab" data-mode="exam">全真模考模式</button>
+                    </div>
+                </div>
+
+                <!-- Mode 1: Study Container -->
+                <div id="study-mode-container">
                     <div class="journey-track-wrapper">
                         <div class="journey-track" id="journey-track-container">
                             <!-- Nodes injected via JS -->
@@ -39,38 +47,78 @@
                         <i class="fas fa-fire streak-icon"></i>
                         <span><span id="streak-count">0</span> 天连续打卡</span>
                     </div>
-                </div>
-                <div class="progress-section">
-                    <p>今日进度: <span id="overall-progress-text">0%</span></p>
-                    <div class="progress-bar" id="daily-progress-container">
-                        <!-- Progress segments injected via JS -->
+
+                    <div class="progress-section">
+                        <p>今日进度: <span id="overall-progress-text">0%</span></p>
+                        <div class="progress-bar" id="daily-progress-container">
+                            <!-- Progress segments injected via JS -->
+                        </div>
                     </div>
-                </div>
-                <div class="today-info">
-                    <h2>第 <span id="current-day-text">1</span> 天任务</h2>
-                    <p id="today-task-desc">预计需 2 小时完成</p>
-                    <div class="action-buttons-grid">
-                        <button id="start-btn" class="primary-btn btn-large">开始今日任务</button>
-                        <button id="view-wrong-btn" class="secondary-btn btn-large">
-                            查看错题集 (<span id="wrong-count">0</span>)
+                    <div class="today-info">
+                        <h2>第 <span id="current-day-text">1</span> 天任务</h2>
+                        <p id="today-task-desc">预计需 2 小时完成</p>
+                        <div class="action-buttons-grid">
+                            <button id="start-btn" class="primary-btn btn-large">开始今日任务</button>
+                            <button id="view-wrong-btn" class="secondary-btn btn-large">
+                                查看错题集 (<span id="wrong-count">0</span>)
+                            </button>
+                        </div>
+                    </div>
+                    <div id="certificate-section" class="hidden">
+                        <button id="ultimate-challenge-btn" class="warning-btn btn-large mt-20">
+                            终极挑战 (30题)
+                        </button>
+                        <button id="view-cert-btn" class="success-btn btn-large mt-20 hidden">
+                            查看通关证书
                         </button>
                     </div>
-                </div>
-                <div id="certificate-section" class="hidden">
-                    <button id="ultimate-challenge-btn" class="warning-btn btn-large mt-20">
-                        终极挑战 (30题)
-                    </button>
-                    <button id="view-cert-btn" class="success-btn btn-large mt-20 hidden">
-                        查看通关证书
+
+                    <button
+                        id="reset-btn"
+                        class="danger-btn mt-20 btn-reset"
+                    >
+                        <i class="fas fa-trash-alt"></i> 清空所有进度
                     </button>
                 </div>
 
-                <button
-                    id="reset-btn"
-                    class="danger-btn mt-20 btn-reset"
-                >
-                    <i class="fas fa-trash-alt"></i> 清空所有进度
-                </button>
+                <!-- Mode 2: Exam Container -->
+                <div id="exam-mode-container" class="hidden">
+                    <div class="exam-intro">
+                        <div class="exam-banner">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <h2 style="text-align: center; margin-bottom: 1rem;">正式全真模拟考核</h2>
+                        <div class="exam-rules">
+                            <div class="rule-item">
+                                <span class="rule-icon"><i class="fas fa-dot-circle"></i></span>
+                                <span class="rule-text">单项选择题：70 题 (1分/题)</span>
+                            </div>
+                            <div class="rule-item">
+                                <span class="rule-icon"><i class="fas fa-check-square"></i></span>
+                                <span class="rule-text">判断题：10 题 (1分/题)</span>
+                            </div>
+                            <div class="rule-item">
+                                <span class="rule-icon"><i class="fas fa-list-ol"></i></span>
+                                <span class="rule-text">多项选择题：20 题 (1分/题)</span>
+                            </div>
+                            <div class="rule-item highlight-rule">
+                                <span class="rule-icon"><i class="fas fa-clock"></i></span>
+                                <span class="rule-text">规定时间：90 分钟</span>
+                            </div>
+                            <div class="rule-item highlight-rule-score">
+                                <span class="rule-icon"><i class="fas fa-star"></i></span>
+                                <span class="rule-text">满分 100 分</span>
+                            </div>
+                            <p class="exam-note">⚠️ 答错的题目会在交卷后自动存入共享错题本中</p>
+                        </div>
+                        <div class="action-buttons-grid" style="margin-top: 2rem;">
+                            <button id="start-exam-btn" class="warning-btn btn-large">开始模拟考试</button>
+                            <button id="view-wrong-btn-exam" class="secondary-btn btn-large">
+                                查看错题集 (<span id="wrong-count-exam">0</span>)
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Study Screen -->
@@ -79,11 +127,18 @@
                     <button id="back-btn" class="icon-btn">
                         <i class="fas fa-arrow-left"></i>
                     </button>
-                    <div class="study-progress">
+                    <div class="study-progress" id="study-progress-wrapper">
                         <span id="study-progress-text">本轮已做 0/50 题 | 预计 0 分钟</span>
                         <div class="progress-bar mini" id="study-progress-container">
                             <!-- Progress segments injected via JS -->
                         </div>
+                    </div>
+                    <!-- Exam Timer & Submit -->
+                    <div class="exam-header-controls hidden" id="exam-header-controls">
+                        <div class="exam-timer-wrapper">
+                            <i class="fas fa-clock"></i> <span id="exam-timer-display">90:00</span>
+                        </div>
+                        <button id="submit-exam-btn" class="secondary-btn" style="padding: 0.5rem 1rem; font-size: 0.9rem; color: var(--danger-color); border-color: var(--danger-color);">直接交卷</button>
                     </div>
                 </div>
 
@@ -117,12 +172,38 @@
 
             <div id="wrong-book-modal" class="modal hidden">
                 <div class="modal-content wrong-book-modal-content">
-                    <h2 style="margin-bottom: 1.5rem; color: var(--text-color)">我的错题集</h2>
+                    <div class="wrong-book-header">
+                        <h2><i class="fas fa-book-open" style="color: var(--primary-color);"></i> 我的错题集</h2>
+                        <p class="wrong-book-subtitle">复习错题是提分的关键，加油！</p>
+                    </div>
                     <div id="wrong-book-list" class="wrong-book-list">
                         <!-- Wrong questions injected here -->
                     </div>
-                    <div class="modal-actions" style="margin-top: 1.5rem">
+                    <div class="modal-actions" style="margin-top: 0; border-top: 1px solid var(--border-color); padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));">
+                        <button id="export-wrong-book-btn" class="secondary-btn"><i class="fas fa-download"></i> 导出错题</button>
                         <button id="close-wrong-book-btn" class="primary-btn">关闭</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exam Result Modal -->
+            <div id="exam-result-modal" class="modal hidden">
+                <div class="modal-content" style="padding: 2rem;">
+                    <h2 style="text-align: center; margin-bottom: 1rem;">考试结束</h2>
+                    <div class="exam-score-display">
+                        <div class="score-circle">
+                            <span id="exam-final-score">0</span><span style="font-size: 1.2rem;">分</span>
+                        </div>
+                        <p id="exam-result-text" style="font-weight: bold; margin-top: 1rem; font-size: 1.1rem; color: var(--text-color);"></p>
+                    </div>
+                    <div class="exam-stats">
+                        <p>全部作答完毕，用时 <span id="exam-time-used" style="color: var(--primary-color); font-weight: 700;">0</span> 分钟</p>
+                        <p style="margin-top: 0.5rem;">✅ 答对: <span id="exam-correct-count" style="color: var(--success-color);">0</span> 题</p>
+                        <p>❌ 答错: <span id="exam-wrong-count" style="color: var(--danger-color);">0</span> 题</p>
+                        <p class="exam-note-small">提示: 答错的题目已自动收录至错题本，可在首页复习巩固。</p>
+                    </div>
+                    <div class="modal-actions" style="margin-top: 2rem">
+                        <button id="close-exam-result-btn" class="primary-btn btn-large">确认并返回主页</button>
                     </div>
                 </div>
             </div>

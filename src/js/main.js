@@ -12,7 +12,10 @@ import {
     saveCertificate,
     generatePDF,
     showToast,
-    initDynamicTexts
+    initDynamicTexts,
+    updateExamTimer,
+    showExamResult,
+    exportWrongBook
 } from './ui.js';
 
 let questionsData = [];
@@ -23,6 +26,17 @@ const ROUND_SIZE = 50;
 
 let isUltimateChallenge = false;
 let ultimateScore = 0;
+
+let examState = {
+    isActive: false,
+    queue: [],
+    currentIndex: 0,
+    score: 0,
+    correctCount: 0,
+    wrongCount: 0,
+    timeRemaining: 90 * 60,
+    timerInterval: null
+};
 
 async function init() {
     try {
@@ -44,6 +58,21 @@ function bindEvents() {
     document.getElementById('start-btn').addEventListener('click', startSession);
 
     document.getElementById('back-btn').addEventListener('click', () => {
+        if (examState && examState.isActive) {
+            if (confirm('正在全真模考中，强行退出将作废且不保留本次进度！确定退出吗？')) {
+                clearInterval(examState.timerInterval);
+                examState.timerInterval = null;
+                examState.isActive = false;
+                dom.cardContainer.innerHTML = '';
+                document.getElementById('study-progress-container').classList.remove('hidden');
+                document.getElementById('study-progress-wrapper').classList.remove('hidden');
+                document.getElementById('exam-header-controls').classList.add('hidden');
+                switchScreen(dom.homeScreen);
+                renderHome();
+            }
+            return;
+        }
+        
         if (confirm('确定要退出当前学习吗？进度将保留。')) {
             saveState();
             dom.cardContainer.innerHTML = '';
@@ -78,8 +107,49 @@ function bindEvents() {
     document
         .getElementById('view-wrong-btn')
         .addEventListener('click', () => renderWrongBook(questionsData));
+    document
+        .getElementById('view-wrong-btn-exam')
+        .addEventListener('click', () => renderWrongBook(questionsData));
+
     document.getElementById('close-wrong-book-btn').addEventListener('click', () => {
         dom.wrongBookModal.classList.add('hidden');
+    });
+    
+    document.getElementById('export-wrong-book-btn').addEventListener('click', () => {
+        exportWrongBook(questionsData);
+    });
+
+    document.getElementById('start-exam-btn').addEventListener('click', startExamMode);
+    
+    document.getElementById('submit-exam-btn').addEventListener('click', () => {
+        if (confirm('考试还未结束，确定要提前交卷吗？')) {
+            submitExam();
+        }
+    });
+    
+    document.getElementById('close-exam-result-btn').addEventListener('click', () => {
+        dom.examResultModal.classList.add('hidden');
+        dom.cardContainer.innerHTML = '';
+        document.getElementById('study-progress-container').classList.remove('hidden');
+        document.getElementById('study-progress-wrapper').classList.remove('hidden');
+        document.getElementById('exam-header-controls').classList.add('hidden');
+        switchScreen(dom.homeScreen);
+        renderHome();
+    });
+
+    const modeTabs = document.querySelectorAll('.mode-tab');
+    modeTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            modeTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            if (tab.dataset.mode === 'study') {
+                dom.studyModeContainer.classList.remove('hidden');
+                dom.examModeContainer.classList.add('hidden');
+            } else {
+                dom.studyModeContainer.classList.add('hidden');
+                dom.examModeContainer.classList.remove('hidden');
+            }
+        });
     });
 }
 
@@ -572,6 +642,169 @@ function finishDay() {
     alert('今日所有任务已完成！为您生成知识点小结。');
     switchScreen(dom.homeScreen);
     renderHome();
+}
+
+// -------------------------------------------------------------
+// Exam Mode Implementation (Mode 2)
+// -------------------------------------------------------------
+function startExamMode() {
+    let singleC = questionsData.filter(q => q.type !== 'multiple' && q.type !== 'determine');
+    let determineC = questionsData.filter(q => q.type === 'determine');
+    let multipleC = questionsData.filter(q => q.type === 'multiple');
+    
+    const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+    
+    let selectedQs = [
+        ...shuffle(singleC).slice(0, 70),
+        ...shuffle(determineC).slice(0, 10),
+        ...shuffle(multipleC).slice(0, 20)
+    ];
+    
+    if (selectedQs.length === 0) {
+        alert('无法构成考卷：题库为空。');
+        return;
+    }
+    
+    examState = {
+        isActive: true,
+        queue: selectedQs.map(q => ({ id: q.id, userAns: null })),
+        currentIndex: 0,
+        score: 0,
+        correctCount: 0,
+        wrongCount: 0,
+        timeRemaining: 90 * 60,
+        timerInterval: null
+    };
+    
+    document.getElementById('study-progress-wrapper').classList.remove('hidden');
+    document.getElementById('study-progress-container').classList.add('hidden');
+    document.getElementById('exam-header-controls').classList.remove('hidden');
+    
+    switchScreen(dom.studyScreen);
+    updateExamTimer(examState.timeRemaining);
+    
+    examState.timerInterval = setInterval(() => {
+        examState.timeRemaining--;
+        updateExamTimer(examState.timeRemaining);
+        if (examState.timeRemaining <= 0) {
+            clearInterval(examState.timerInterval);
+            examState.timerInterval = null;
+            alert('考试时间到！已自动为您交卷。');
+            submitExam();
+        }
+    }, 1000);
+    
+    renderExamCard();
+}
+
+function renderExamCard() {
+    let qState = examState.queue[examState.currentIndex];
+    let qData = questionsData.find(q => q.id === qState.id);
+    
+    if (!qData) {
+        console.warn('Exam question missing in database, skipping:', qState.id);
+        if (examState.currentIndex < examState.queue.length - 1) {
+            examState.currentIndex++;
+            renderExamCard();
+        } else {
+            submitExam();
+        }
+        return;
+    }
+    
+    document.getElementById('study-progress-text').innerText = `模拟考场: 第 ${examState.currentIndex + 1} / ${examState.queue.length} 题`;
+    
+    dom.cardContainer.innerHTML = '';
+    const card = document.createElement('div');
+    card.className = 'card fade-hidden';
+    
+    let typeName = '单选题';
+    if (qData.type === 'multiple') typeName = '多选题';
+    if (qData.type === 'determine') typeName = '判断题';
+    
+    let html = `<div class="question-type">${typeName} (1分)</div>
+                <div class="question-stem">${qData.stem}</div>
+                <ul class="options-list">`;
+                
+    qData.options.forEach((opt) => {
+        let val = getOptionValue(qData.type, opt);
+        let isSelected = qState.userAns && qState.userAns.includes(val) ? 'selected' : '';
+        html += `<li class="option-item ${isSelected}" data-val="${val}">${opt}</li>`;
+    });
+    
+    html += `</ul>
+             <button id="exam-next-btn" class="primary-btn btn-large submit-btn">${examState.currentIndex === examState.queue.length - 1 ? '提交考卷' : '下一题'}</button>`;
+             
+    card.innerHTML = html;
+    dom.cardContainer.appendChild(card);
+    setTimeout(() => card.classList.remove('fade-hidden'), 30);
+    
+    const options = card.querySelectorAll('.option-item');
+    options.forEach((opt) => {
+        opt.addEventListener('click', () => {
+            if (qData.type === 'multiple') {
+                opt.classList.toggle('selected');
+            } else {
+                options.forEach((o) => o.classList.remove('selected'));
+                opt.classList.add('selected');
+            }
+        });
+    });
+    
+    document.getElementById('exam-next-btn').addEventListener('click', () => {
+        let selected = [];
+        options.forEach(o => { if (o.classList.contains('selected')) selected.push(o.dataset.val); });
+        qState.userAns = selected.sort().join(',');
+        
+        if (examState.currentIndex < examState.queue.length - 1) {
+            examState.currentIndex++;
+            renderExamCard();
+        } else {
+            submitExam();
+        }
+    });
+}
+
+function submitExam() {
+    clearInterval(examState.timerInterval);
+    
+    examState.queue.forEach(qState => {
+        let qData = questionsData.find(q => q.id === qState.id);
+        if (!qData) return;
+        
+        let correctAns = qData.answer;
+        let isCorrect = false;
+        
+        if (qData.type === 'multiple') {
+            let nArr = correctAns.match(/[A-Z]/g) || [correctAns];
+            let nStr = nArr.sort().join(',');
+            isCorrect = (qState.userAns && qState.userAns === nStr);
+        } else {
+            isCorrect = (qState.userAns && qState.userAns === correctAns);
+        }
+        
+        if (isCorrect) {
+            examState.score++;
+            examState.correctCount++;
+        } else {
+            examState.wrongCount++;
+            // 只有实际作答了但答错的才进错题本，未作答的跳过
+            if (qState.userAns && qState.userAns.length > 0) {
+                if (!state.wrongBook[qState.id]) {
+                    state.wrongBook[qState.id] = { reviewDays: [], failCount: 0 };
+                }
+                state.wrongBook[qState.id].failCount = (state.wrongBook[qState.id].failCount || 0) + 1;
+                if (!state.wrongBook[qState.id].reviewDays.includes(state.currentDay + 1)) {
+                    state.wrongBook[qState.id].reviewDays.push(state.currentDay + 1);
+                }
+            }
+        }
+    });
+    
+    saveState();
+    let timeUsedMin = Math.ceil((90 * 60 - examState.timeRemaining) / 60);
+    showExamResult(examState.score, examState.correctCount, examState.wrongCount, timeUsedMin);
+    examState.isActive = false;
 }
 
 window.addEventListener('DOMContentLoaded', init);

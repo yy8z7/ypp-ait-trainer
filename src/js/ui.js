@@ -13,7 +13,10 @@ export const dom = {
     printScreen: document.getElementById('print-screen'),
     certModal: document.getElementById('cert-modal'),
     wrongBookModal: document.getElementById('wrong-book-modal'),
-    cardContainer: document.getElementById('card-container')
+    cardContainer: document.getElementById('card-container'),
+    examModeContainer: document.getElementById('exam-mode-container'),
+    studyModeContainer: document.getElementById('study-mode-container'),
+    examResultModal: document.getElementById('exam-result-modal')
 };
 
 export function switchScreen(screen) {
@@ -36,6 +39,8 @@ export function renderHome() {
 
     let totalWrong = Object.keys(state.wrongBook).length;
     document.getElementById('wrong-count').innerText = totalWrong;
+    const wrongExamEl = document.getElementById('wrong-count-exam');
+    if (wrongExamEl) wrongExamEl.innerText = totalWrong;
 
     let desc = '';
     let todayStats = state.dailyStats[state.currentDay];
@@ -273,18 +278,71 @@ export function renderWrongBook(questionsData) {
             let q = questionsData.find((x) => x.id === id);
             if (!q) return;
 
+            let typeLabel = "单选题";
+            if (q.type === 'multiple') typeLabel = "多选题";
+            if (q.type === 'determine') typeLabel = "判断题";
+            let failCount = state.wrongBook[id].failCount || 1;
+
             let div = document.createElement('div');
             div.className = 'wrong-item';
             div.innerHTML = `
+                <div class="wrong-item-header">
+                    <span class="wrong-type-tag">${typeLabel}</span>
+                    <span class="wrong-count-tag"><i class="fas fa-times-circle"></i> 错误 ${failCount} 次</span>
+                </div>
                 <h4>${idx + 1}. ${q.stem}</h4>
                 <div class="wrong-answer">正确答案: ${q.answer}</div>
-                <div class="wrong-analysis">${q.analysis}</div>
+                <div class="wrong-analysis"><i class="fas fa-lightbulb"></i> 解析: ${q.analysis}</div>
             `;
             list.appendChild(div);
         });
     }
 
     dom.wrongBookModal.classList.remove('hidden');
+}
+
+export function exportWrongBook(questionsData) {
+    let wrongIds = Object.keys(state.wrongBook);
+    if (wrongIds.length === 0) {
+        showToast("没有错题可以导出！");
+        return;
+    }
+    
+    let content = "# 我的错题集\n\n";
+    wrongIds.forEach((id, idx) => {
+        let q = questionsData.find((x) => x.id === id);
+        if (!q) return;
+        
+        let typeLabel = q.type === 'multiple' ? "多选题" : (q.type === 'determine' ? "判断题" : "单选题");
+        let failCount = state.wrongBook[id].failCount || 1;
+        
+        content += `### ${idx + 1}. [${typeLabel}] ${q.stem}\n\n`;
+        if (q.options && Array.isArray(q.options)) {
+            q.options.forEach(opt => {
+                content += `- ${opt.trim()}\n`;
+            });
+            content += `\n`;
+        }
+        
+        content += `**正确答案**: ${q.answer}\n\n`;
+        content += `**错误次数**: ${failCount} 次\n\n`;
+        content += `**解析**: ${q.analysis}\n\n`;
+        content += `---\n\n`;
+    });
+    
+    // Create text file and download
+    let blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    let url = URL.createObjectURL(blob);
+    let link = document.createElement("a");
+    link.href = url;
+    let dateStr = new Date().toISOString().slice(0,10);
+    link.download = `错题集_导出_${dateStr}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    showToast("错题集已导出成功！");
 }
 
 export function generatePDF(questionsData) {
@@ -341,4 +399,46 @@ export function showToast(message) {
         toast.classList.add('fade-out');
         setTimeout(() => toast.remove(), 300);
     }, 2500);
+}
+
+export function updateExamTimer(secondsLeft) {
+    const min = Math.floor(secondsLeft / 60);
+    const sec = secondsLeft % 60;
+    const timeStr = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+    const display = document.getElementById('exam-timer-display');
+    const wrapper = document.querySelector('.exam-timer-wrapper');
+    if (display) display.innerText = timeStr;
+    
+    if (secondsLeft <= 300) { // 5 mins
+        wrapper?.classList.add('danger');
+    } else {
+        wrapper?.classList.remove('danger');
+    }
+}
+
+export function showExamResult(score, correctCount, wrongCount, timeUsedMin) {
+    document.getElementById('exam-final-score').innerText = score;
+    document.getElementById('exam-correct-count').innerText = correctCount;
+    document.getElementById('exam-wrong-count').innerText = wrongCount;
+    document.getElementById('exam-time-used').innerText = timeUsedMin;
+    
+    const resultText = document.getElementById('exam-result-text');
+    const circle = document.querySelector('.score-circle');
+    
+    if (circle) {
+        circle.style.setProperty('--score-deg', `${(score / 100) * 360}deg`);
+        if (score >= 90) {
+            resultText.innerText = '优秀！达到合格标准 🎉';
+            resultText.style.color = 'var(--success-color)';
+            circle.classList.remove('bad-score');
+        } else {
+            resultText.innerText = '未达标，再接再厉 💪';
+            resultText.style.color = 'var(--danger-color)';
+            circle.classList.add('bad-score');
+        }
+    }
+    
+    if (dom.examResultModal) {
+        dom.examResultModal.classList.remove('hidden');
+    }
 }
